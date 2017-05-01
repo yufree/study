@@ -5,6 +5,189 @@ suppressPackageStartupMessages(library(sva))
 suppressPackageStartupMessages(library(limma))
 library(CAMERA)
 library(qvalue)
+#' Get xcmsset object in one step with optimized methods.
+#' path the path to your data
+#' index the index of the files
+#' BPPARAM used for BiocParallel package
+#' pmethod parameters used for different instrumentals such as 'hplcorbitrap', 'uplcorbitrap', 'hplcqtof', 'hplchqtof', 'uplcqtof', 'uplchqtof'. The parameters were from the references
+#' ... arguments for xcmsSet function
+#' the parameters are extracted from the papers. If you use name other than the name above, you will use the default setting of XCMS. Also I suggest IPO packages or apLCMS packages to get reasonable data for your own instrumental. If you want to summit the results to a paper, remember to include those parameters.
+#' return a xcmsset object for that path or selected samples
+#' references Patti, G. J.; Tautenhahn, R.; Siuzdak, G. Nat. Protocols 2012, 7 (3), 508–516.
+getdata <-
+        function(path,
+                 index = F,
+                 BPPARAM = BiocParallel::SnowParam(workers = 12),
+                 pmethod = 'hplcorbitrap',
+                 ...) {
+                cdffiles <- list.files(path, recursive = TRUE, full.names = TRUE)
+                if (index) {
+                        cdffiles <- cdffiles[index]
+                }
+                if (pmethod == 'hplcorbitrap') {
+                        xset <-
+                                xcms::xcmsSet(
+                                        cdffiles,
+                                        BPPARAM = BPPARAM,
+                                        method = "centWave",
+                                        ppm = 2.5,
+                                        peakwidth = c(10, 60),
+                                        prefilter = c(3, 5000),
+                                        ...
+                                )
+                        if (index & length(index) == 1) {
+                                xset3 <- xset
+                        } else{
+                                xset <- xcms::group(xset,
+                                                    bw = 5,
+                                                    mzwid = 0.015)
+                                xset2 <- xcms::retcor(xset)
+                                # you need group the peaks again for this corrected data
+                                xset2 <-
+                                        xcms::group(xset2,
+                                                    bw = 5,
+                                                    mzwid = 0.015)
+                                xset3 <-
+                                        xcms::fillPeaks(xset2, BPPARAM = BPPARAM)
+                        }
+                } else if (pmethod == 'uplcorbitrap') {
+                        xset <-
+                                xcms::xcmsSet(
+                                        cdffiles,
+                                        BPPARAM = BPPARAM,
+                                        method = "centWave",
+                                        ppm = 2.5,
+                                        peakwidth = c(5, 20),
+                                        prefilter = c(3, 5000),
+                                        ...
+                                )
+                        xset <-
+                                xcms::group(xset, bw = 2, mzwid = 0.015)
+                        xset2 <- xcms::retcor(xset)
+                        # you need group the peaks again for this corrected data
+                        xset2 <-
+                                xcms::group(xset2, bw = 2, mzwid = 0.015)
+                        xset3 <-
+                                xcms::fillPeaks(xset2, BPPARAM = BPPARAM)
+                } else if (pmethod == 'hplcqtof') {
+                        xset <-
+                                xcms::xcmsSet(
+                                        cdffiles,
+                                        BPPARAM = BPPARAM,
+                                        method = "centWave",
+                                        ppm = 30,
+                                        peakwidth = c(10, 60),
+                                        prefilter = c(0, 0),
+                                        ...
+                                )
+                        if (index & length(index) == 1) {
+                                xset3 <- xset
+                        } else{
+                                xset <- xcms::group(xset,
+                                                    bw = 5,
+                                                    mzwid = 0.025)
+                                xset2 <- xcms::retcor(xset)
+                                # you need group the peaks again for this corrected data
+                                xset2 <-
+                                        xcms::group(xset2,
+                                                    bw = 5,
+                                                    mzwid = 0.025)
+                                xset3 <-
+                                        xcms::fillPeaks(xset2, BPPARAM = BPPARAM)
+                        }
+                } else if (pmethod == 'hplchqtof') {
+                        xset <-
+                                xcms::xcmsSet(
+                                        cdffiles,
+                                        BPPARAM = BPPARAM,
+                                        method = "centWave",
+                                        ppm = 15,
+                                        peakwidth = c(10, 60),
+                                        prefilter = c(0, 0),
+                                        ...
+                                )
+                        if (index & length(index) == 1) {
+                                xset3 <- xset
+                        } else{
+                                xset <- xcms::group(xset,
+                                                    bw = 5,
+                                                    mzwid = 0.015)
+                                xset2 <- xcms::retcor(xset)
+                                # you need group the peaks again for this corrected data
+                                xset2 <-
+                                        xcms::group(xset2,
+                                                    bw = 5,
+                                                    mzwid = 0.015)
+                                xset3 <-
+                                        xcms::fillPeaks(xset2, BPPARAM = BPPARAM)
+                        }
+                } else if (pmethod == 'uplcqtof') {
+                        xset <-
+                                xcms::xcmsSet(
+                                        cdffiles,
+                                        BPPARAM = BPPARAM,
+                                        method = "centWave",
+                                        ppm = 30,
+                                        peakwidth = c(5, 20),
+                                        prefilter = c(0, 0),
+                                        ...
+                                )
+                        if (index & length(index) == 1) {
+                                xset3 <- xset
+                        } else{
+                                xset <- xcms::group(xset,
+                                                    bw = 2,
+                                                    mzwid = 0.025)
+                                xset2 <- xcms::retcor(xset)
+                                # you need group the peaks again for this corrected data
+                                xset2 <-
+                                        xcms::group(xset2,
+                                                    bw = 2,
+                                                    mzwid = 0.025)
+                                xset3 <-
+                                        xcms::fillPeaks(xset2, BPPARAM = BPPARAM)
+                        }
+                } else if (pmethod == 'uplchqtof') {
+                        xset <-
+                                xcms::xcmsSet(
+                                        cdffiles,
+                                        BPPARAM = BPPARAM,
+                                        method = "centWave",
+                                        ppm = 15,
+                                        peakwidth = c(5, 20),
+                                        prefilter = c(0, 0),
+                                        ...
+                                )
+                        if (index & length(index) == 1) {
+                                xset3 <- xset
+                        } else{
+                                xset <- xcms::group(xset,
+                                                    bw = 2,
+                                                    mzwid = 0.015)
+                                xset2 <- xcms::retcor(xset)
+                                # you need group the peaks again for this corrected data
+                                xset2 <-
+                                        xcms::group(xset2,
+                                                    bw = 2,
+                                                    mzwid = 0.015)
+                                xset3 <-
+                                        xcms::fillPeaks(xset2, BPPARAM = BPPARAM)
+                        }
+                } else{
+                        xset <- xcms::xcmsSet(cdffiles, BPPARAM = BPPARAM, ...)
+                        if (index & length(index) == 1) {
+                                xset3 <- xset
+                        } else{
+                                xset <- xcms::group(xset)
+                                xset2 <- xcms::retcor(xset)
+                                # you need group the peaks again for this corrected data
+                                xset2 <- xcms::group(xset2)
+                                xset3 <-
+                                        xcms::fillPeaks(xset2, BPPARAM = BPPARAM)
+                        }
+                }
+                return(xset3)
+        }
 #' svacor is used to correct the data by surrogate variable analysis and the improved algorithm would be loaded from yufree/sva-devel repo
 #' the impute data should be a xcmsSet object
 #' lv means the group infomation, which could be extract from the xcmsSet
@@ -317,7 +500,7 @@ svapca <- function(list,
         )
 }
 
-#' svaplot is used to show the selected peaks according to p-value and q-value
+#' svaplot is used to show the selected peaks as heatmap according to p-value and q-value
 #' Input data could be the results from svacor function
 #' Two methods could be used: pqvalues = "sv" means the surrogate variables analysis would be used to compute the correct data, p-value and q-value are also based on the corrected data; pqvalues = "annova" means the visulization of raw data according to p-value and q-value.
 #' If there are seleced peaks to be show, svaplot will also return a list with selected data matrix
@@ -1205,3 +1388,82 @@ svaplot <- function(list,
                 }
         }
 }
+#' Plot the comparison of PCA analysis before and after batch correction
+svap <- function(name = 'pca.png',p1,p2,lv){
+        png(name)
+        par(mfrow = c(1,2))
+        pca <- prcomp(t(p1))
+        pcaVars=signif(((pca$sdev)^2)/(sum((pca$sdev)^2)),3)*100
+        plot(pca$x[,1], 
+             pca$x[,2], 
+             xlab=paste("PC1:",pcaVars[1],"% of Variance Explained"),
+             ylab=paste("PC2:",pcaVars[2],"% of Variance Explained"),
+             pch=as.character(lv),
+             cex=2,
+             main = "PCA-Raw")
+        pca <- prcomp(t(p2))
+        pcaVars=signif(((pca$sdev)^2)/(sum((pca$sdev)^2)),3)*100
+        plot(pca$x[,1], 
+             pca$x[,2], 
+             xlab=paste("PC1:",pcaVars[1],"% of Variance Explained"),
+             ylab=paste("PC2:",pcaVars[2],"% of Variance Explained"),
+             pch=as.character(lv),
+             cex=2,
+             main = "PCA")
+        dev.off()
+}
+#' Plot the Quantitative visualization of Batch effects
+plotb <- function(name = 'relativep.pdf', df, dfsv, dfanova,pos = 'topleft') {
+        pdf(name, height = 8, width = 6)
+        par(mfrow = c(2, 1))
+        plot(
+                df$PosteriorProbabilitiesSurrogate[dfanova$pqvalues] ~ df$PosteriorProbabilitiesMod[dfanova$pqvalues],
+                xlab = 'Influences from experimental design',
+                ylab = 'Influences from Batch effects',
+                main = 'Influences of selected peaks(FDR control at 0.05)',
+                cex = -log10(df$`p-valuesCorrected`[dfsv$pqvalues])-2,
+                ylim = c(0, 1),
+                xlim = c(0.6, 1.02)
+        )
+        points(
+                df$PosteriorProbabilitiesSurrogate[dfsv$pqvalues] ~ df$PosteriorProbabilitiesMod[dfsv$pqvalues],
+                pch = 1,
+                cex = -log10(df$`p-values`[dfanova$pqvalues])-2,
+                col = 'red'
+        )
+        legend(
+                pos,
+                c("raw", "corrected"),
+                pch = c(1, 1),
+                col = c('black', 'red')
+        )
+        plot(
+                df$PosteriorProbabilitiesSurrogate ~ df$PosteriorProbabilitiesMod,
+                xlab = 'Influences  from experimental design',
+                ylab = 'Influences  from Batch effects',
+                main = 'Influences  of all peaks',
+                pch = 1,
+                cex = 1.2,
+                ylim = c(0, 1),
+                xlim = c(0, 1.02)
+        )
+        dev.off()
+}
+# The following script is a demo to analysis metabolomics data in the main text
+# Set data path
+path <- "./pos/"
+# Extrate data with optimized parameters for xcms
+xset <- getdata(path,pmethod = 'uplcqtof')
+# Assign the group information
+lv <- as.factor(c(rep('C',10),rep('1',10),rep('2',10),rep('3',10)))
+# Corrected the batch effects
+df <- svacor(xset,lv)
+# Plot the PCA analysis results in a linear model
+svapca(df,center = F,scale = T,lv = as.character(lv))
+# Plot the selected peaks as heatmap according to p-value and q-value
+dfanova <- svaplot(df,pqvalues = 'anova')
+dfsv <- svaplot(df,pqvalues = 'sv')
+# Plot the PCA analysis before and after batch correction
+svap(name = 'pca.png',dfanova$data,dfsv$dataCorrected,lv)
+# plot the Quantitative visualization of Batch effects
+plotb(name = 'relativep.pdf',df,dfsv,dfanova,pos = 'topleft')
